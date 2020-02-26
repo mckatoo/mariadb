@@ -1,0 +1,47 @@
+version: "3.7"
+
+networks:
+  dbnet:
+    driver: overlay
+
+services:
+  dbcluster:
+    image: toughiq/mariadb-cluster
+    networks:
+      - dbnet
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 180s
+      update_config:
+        parallelism: 1
+        delay: 3m
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345
+      MYSQL_DATABASE: uniesi_test
+      MYSQL_USER: uniesi
+      MYSQL_PASSWORD: 12345
+    command: [--default-authentication-plugin=mysql_native_password]
+
+  dblb:
+    image: toughiq/maxscale
+    networks:
+      - dbnet
+    ports:
+      - 3306:3306
+    environment:
+      - DB_SERVICE_NAME=dbcluster
+      - ENABLE_ROOT_USER=1
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 180s
+      update_config:
+        parallelism: 1
+        delay: 3m
