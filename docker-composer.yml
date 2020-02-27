@@ -10,7 +10,7 @@ services:
     networks:
       - dbnet
     deploy:
-      replicas: 1
+      replicas: 3
       restart_policy:
         condition: on-failure
         delay: 10s
@@ -33,8 +33,10 @@ services:
     ports:
       - 3306:3306
     environment:
-      - DB_SERVICE_NAME=dbcluster
-      - ENABLE_ROOT_USER=1
+      DB_SERVICE_NAME: dbcluster
+      ENABLE_ROOT_USER: 1
+    depends_on:
+      - dbcluster
     deploy:
       replicas: 1
       restart_policy:
@@ -45,12 +47,15 @@ services:
       update_config:
         parallelism: 1
         delay: 3m
+
   adminer:
     image: adminer
     ports:
       - 8080:8080
     networks:
       - dbnet
+    depends_on:
+      - dblb
     deploy:
       replicas: 1
       restart_policy:
@@ -58,3 +63,9 @@ services:
         delay: 5s
         max_attempts: 3
         window: 180s
+    healthcheck:
+      test: curl -X POST -F 'auth[driver]=server' -F 'auth[server]=dblb' -F 'auth[username]=uniesi' -F 'auth[password]=12345' http://127.0.0.1:8080 || exit 1
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
